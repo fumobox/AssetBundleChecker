@@ -3,13 +3,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
-#else
-using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
-#endif
 using System.Runtime.Remoting.Messaging;
 using System.Linq.Expressions;
 
@@ -45,22 +40,13 @@ namespace UTJ
         private void OnEnable()
         {
 
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             string windowLayoutPath = "Packages/com.utj.assetbundlechecker/Editor/UI/UXML/AssetBundleChecker.uxml";
-#else
-            string windowLayoutPath = "Packages/com.utj.assetbundlechecker/Editor/UI/UXML2018/AssetBundleChecker.uxml";
-#endif
             var now = System.DateTime.Now;
             openDateStr = now.ToString("yyyyMMdd_HHmmss");
 
             var tree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(windowLayoutPath);
             var visualElement = CloneTree(tree);
             this.rootVisualElement.Add(visualElement);
-
-
-#if !UNITY_2019_1_OR_NEWER && !UNITY_2019_OR_NEWER
-            this.lastHeight = -1.0f;
-#endif
 
             this.InitHeader();
 
@@ -92,9 +78,6 @@ namespace UTJ
                     dumpExecute = null;
                 }
             }
-#if !UNITY_2019_1_OR_NEWER && !UNITY_2019_OR_NEWER
-            this.SetupScrollViewHeight();
-#endif
         }
 
         private void InitHeader()
@@ -156,38 +139,23 @@ namespace UTJ
 
         private void InitAssetBundleItems()
         {
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             string assetBuntleItemFile = "Packages/com.utj.assetbundlechecker/Editor/UI/UXML/AssetBundleFileItem.uxml";
-#else
-            string assetBuntleItemFile = "Packages/com.utj.assetbundlechecker/Editor/UI/UXML2018/AssetBundleFileItem.uxml";
-#endif
             this.assetBundleTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(assetBuntleItemFile);
 
             this.assetBunleItemBody = new ScrollView();
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             assetBunleItemBody.style.overflow = Overflow.Hidden;
-#endif
         }
         private void InitShaderItems()
         {
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             string shaderItem = "Packages/com.utj.assetbundlechecker/Editor/UI/UXML/ShaderItem.uxml";
-#else
-            string shaderItem = "Packages/com.utj.assetbundlechecker/Editor/UI/UXML2018/ShaderItem.uxml";
-#endif
             this.shaderItemBody = new ScrollView();
-
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             shaderItemBody.style.overflow = Overflow.Hidden;
-#endif
             this.shaderTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(shaderItem);
         }
         private void InitShaderVariants()
         {
             this.shaderVariantsItemBody = new ScrollView();
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             shaderVariantsItemBody.style.overflow = Overflow.Hidden;
-#endif
         }
 
         private void SelectAssetBundleFile()
@@ -276,11 +244,7 @@ namespace UTJ
         }
         private static VisualElement CloneTree(VisualTreeAsset asset)
         {
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             return asset.CloneTree();
-#else
-            return asset.CloneTree(null);
-#endif
         }
 
         private void DumpAllShader()
@@ -326,7 +290,7 @@ namespace UTJ
             }
         }
 
-            
+
         private void UnloadAll()
         {
             var delList = new List<AssetBundleItemUI>(this.loadAbItemUIs);
@@ -336,34 +300,5 @@ namespace UTJ
                 del.Dispose();
             }
         }
-
-#if !UNITY_2019_1_OR_NEWER && !UNITY_2019_OR_NEWER
-        private VisualElement rootVisualElement
-        {
-            get
-            {
-                return this.GetRootVisualContainer();
-            }
-        }
-        private float lastHeight = -1.0f;
-        private float lastWidth = -1.0f;
-        private void SetupScrollViewHeight()
-        {
-            if (lastHeight == this.position.height && lastWidth == this.position.width)
-            {
-                return;
-            }
-            this.assetBunleItemBody.style.width = this.position.width;
-            this.shaderItemBody.style.width = this.position.width;
-            this.shaderVariantsItemBody.style.width = this.position.width;
-
-            this.assetBunleItemBody.style.height = this.position.height - 100;
-            this.shaderItemBody.style.height = this.position.height - 100;
-            this.shaderVariantsItemBody.style.height = this.position.height - 100;
-
-            lastHeight = this.position.height;
-            lastWidth = this.position.width;
-        }
-#endif
     }
 }

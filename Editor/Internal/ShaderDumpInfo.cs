@@ -60,7 +60,6 @@ namespace UTJ
                     }
                 }
             }
-#if UNITY_2021_3_OR_NEWER
             public void ResolveKeywordName(List<string> keywordNames)
             {
                 keywords = new List<string>(keywordIndecies.Count);
@@ -94,36 +93,6 @@ namespace UTJ
 
                 this.ResolvedConbinedKeyword();
             }
-#else
-            public void ResolveKeywordName(Dictionary<int, string> dictionary)
-            {
-                keywords = new List<string>(keywordIndecies.Count);
-                for (int i = 0; i < keywordIndecies.Count; ++i)
-                {
-                    int index = keywordIndecies[i];
-                    string val = null;
-                    if (dictionary.TryGetValue(index, out val))
-                    {
-                        keywords.Add(val);
-                    }
-                }
-                if (localKeywordIndecies != null)
-                {
-                    for (int i = 0; i < this.localKeywordIndecies.Count; ++i)
-                    {
-                        int index = localKeywordIndecies[i];
-                        string val = null;
-                        if (dictionary.TryGetValue(index, out val))
-                        {
-                            keywords.Add(val);
-                        }
-                    }
-                }
-
-                this.ResolvedConbinedKeyword();
-            }
-
-#endif
 
             private void ResolvedConbinedKeyword()
             {
@@ -252,9 +221,6 @@ namespace UTJ
                 SetupShaderStage(serializedProperty);
                 SetupTags(serializedProperty);
                 SetupNameInfo(serializedProperty);
-#if !UNITY_2021_3_OR_NEWER
-                SetupKeywordDictionary(serializedProperty);
-#endif
                 var shaderExecute = ExecuteShader();
                 while (shaderExecute.MoveNext())
                 {
@@ -262,7 +228,6 @@ namespace UTJ
                 }
                 yield return null;
             }
-#if UNITY_2021_3_OR_NEWER
             public IEnumerator ExecuteShader()
             {
                 var progVertex = serializedProperty.FindPropertyRelative("progVertex.m_PlayerSubPrograms");
@@ -308,46 +273,12 @@ namespace UTJ
                 }
                 return num;
             }
-#else
-
-            public IEnumerator ExecuteShader()
-            {
-                var progVertex = serializedProperty.FindPropertyRelative("progVertex.m_SubPrograms");
-                var progFragment = serializedProperty.FindPropertyRelative("progFragment.m_SubPrograms");
-
-                int vertNum = progVertex.arraySize;
-                int fragNum = progFragment.arraySize;
-
-
-                vertInfos = new List<GpuProgramInfo>(vertNum);
-                fragmentInfos = new List<GpuProgramInfo>(fragNum);
-                // vertex
-                yieldChk.SetVertexNum(vertNum);
-                var vertExec = ExecuteGPUPrograms(vertInfos, -1 ,progVertex, vertNum, yieldChk.CompleteVertIdx);
-                while (vertExec.MoveNext())
-                {
-                    yield return null;
-                }
-                // fragment
-                yieldChk.SetFragmentNum(fragNum);
-                var fragExec = ExecuteGPUPrograms(fragmentInfos, -1 , progFragment, fragNum, yieldChk.CompleteFragIdx);
-                while (fragExec.MoveNext())
-                {
-                    yield return null;
-                }
-            }
-
-#endif
             private IEnumerator ExecuteGPUPrograms(List<GpuProgramInfo> programs, int tier, SerializedProperty props, int num, Action<int> onCompleteIndex)
             {
                 for (int i = 0; i < num; ++i)
                 {
                     var gpuProgram = new GpuProgramInfo(props.GetArrayElementAtIndex(i), tier);
-#if UNITY_2021_3_OR_NEWER
                     gpuProgram.ResolveKeywordName( this.dumpInfoObject.keywordNames );
-#else
-                    gpuProgram.ResolveKeywordName(keywordDictionary);
-#endif
                     vertInfos.Add(gpuProgram);
                     // yield
                     onCompleteIndex(i);
@@ -384,31 +315,6 @@ namespace UTJ
                 useName = serializedProperty.FindPropertyRelative("m_UseName").stringValue;
                 name = serializedProperty.FindPropertyRelative("m_Name").stringValue;
             }
-
-#if !UNITY_2021_3_OR_NEWER
-            private void SetupKeywordDictionary(SerializedProperty serializedProperty)
-            {
-                var nameIndices = serializedProperty.FindPropertyRelative("m_NameIndices");
-                int nameSize = nameIndices.arraySize;
-                this.keywordDictionary = new Dictionary<int, string>(nameSize);
-                this.keywordInfos = new List<KeywordDictionaryInfo>(nameSize);
-                for (int k = 0; k < nameSize; ++k)
-                {
-                    var currentNameIndecies = nameIndices.GetArrayElementAtIndex(k).FindPropertyRelative("first");
-                    var nameIndex = nameIndices.GetArrayElementAtIndex(k).FindPropertyRelative("second");
-
-
-                    if (!keywordDictionary.ContainsKey(nameIndex.intValue))
-                    {
-                        int idxVal = nameIndex.intValue;
-                        string strVal = currentNameIndecies.stringValue;
-                        keywordDictionary.Add(idxVal, strVal);
-                        keywordInfos.Add(new KeywordDictionaryInfo(idxVal, strVal));
-                    }
-                }
-
-            }
-#endif
         }
 
         [Serializable]
@@ -525,13 +431,10 @@ namespace UTJ
         [SerializeField]
         public List<SubShaderInfo> subShaderInfos;
 
-#if UNITY_2021_3_OR_NEWER
         [SerializeField]
         public List<string> keywordNames;
         [SerializeField]
         public List<int> keywordFlags;
-
-#endif
 
         private SerializedObject serializedObject;
         private IEnumerator executeProgress;
@@ -596,7 +499,6 @@ namespace UTJ
             this.yieldChk.SetYieldCheckTime();
         }
 
-#if UNITY_2021_3_OR_NEWER
         private void ExecuteKeywordInfos()
         {
             // names
@@ -616,7 +518,6 @@ namespace UTJ
                 this.keywordFlags.Add(flagsProp.GetArrayElementAtIndex(i).intValue);
             }
         }
-#endif
 
         private IEnumerator Execute()
         {
@@ -650,10 +551,9 @@ namespace UTJ
             yield return null;
 
             // keyword names
-#if UNITY_2021_3_OR_NEWER
             ExecuteKeywordInfos();
             yield return null;
-#endif
+
             // subShaders
             SerializedProperty subShadersProp = serializedObject.FindProperty("m_ParsedForm.m_SubShaders");
             int subShaderNum = subShadersProp.arraySize;

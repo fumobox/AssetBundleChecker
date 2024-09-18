@@ -4,24 +4,19 @@ using UnityEditor;
 using UnityEngine;
 
 
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
-#else
-using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
-#endif
 
 namespace UTJ
 {
     public class AssetBundleItemUI:System.IDisposable
     {
-        public delegate void OnDeleteAsset(AssetBundleItemUI itemUi); 
+        public delegate void OnDeleteAsset(AssetBundleItemUI itemUi);
 
         private AssetBundle assetBundle;
         private VisualElement element;
         private List<UnityEngine.Object> assetBundleObjects;
-        private List<InstanciateGameObjectFromAb> instanciateObjects;
+        private List<InstantiateGameObjectFromAb> instanciateObjects;
 
         private Foldout advancedFold;
 
@@ -33,11 +28,7 @@ namespace UTJ
             this.assetBundle =AssetBundle.LoadFromFile(abFilePath);
             if(this.assetBundle == null) { return; }
             this.serializedObject = new SerializedObject(this.assetBundle);
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
             this.element = tree.CloneTree();
-#else
-            this.element = tree.CloneTree(null);
-#endif
             this.onDeleteAsset = onDelete;
             if (!IsStreamSceneAsset(this.serializedObject))
             {
@@ -71,18 +62,10 @@ namespace UTJ
             }
             this.element.Q<Foldout>("AssetBundleItem").value = false;
 
-#if !UNITY_2019_1_OR_NEWER && !UNITY_2019_OR_NEWER
-            this.element.Q<Foldout>("AssetBundleItem").style.minWidth = 400;
-#endif
-
             var loadObjectBody = this.element.Q<VisualElement>("LoadObjectBody");
             foreach( var abObject in assetBundleObjects)
             {
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
                 var field = new ObjectField(abObject.name);
-#else
-                var field = new ObjectField();
-#endif
                 field.allowSceneObjects = true;
                 loadObjectBody.Add(field);
                 field.objectType = abObject.GetType();
@@ -91,27 +74,25 @@ namespace UTJ
 
             // instanciate...
             var instanciateBody = this.element.Q<VisualElement>("MaterialChangeBody");
-            instanciateObjects = new List<InstanciateGameObjectFromAb>();
+            instanciateObjects = new List<InstantiateGameObjectFromAb>();
             foreach (var abObject in assetBundleObjects)
             {
                 var prefab = abObject as GameObject;
                 if( prefab == null) { continue; }
-                var instanciateObject = new InstanciateGameObjectFromAb(prefab);
+                var instanciateObject = new InstantiateGameObjectFromAb(prefab);
                 instanciateObjects.Add(instanciateObject);
 
                 var instanceUI = new InstanciateGameObjectUI(instanciateObject);
                 instanceUI.AddToParent(instanciateBody);
             }
 
-            // advanced 
+            // advanced
             advancedFold = this.element.Q<Foldout>("Advanced");
             var advancedBody = new IMGUIContainer(OnAdvancedGUI);
             advancedFold.Add(advancedBody);
 
             // Close Btn
 
-#if !UNITY_2019_1_OR_NEWER && !UNITY_2019_OR_NEWER
-#endif
             this.element.Q<Button>("CloseBtn").clickable.clicked += OnClickClose;
         }
 
@@ -191,7 +172,7 @@ namespace UTJ
 
         public void DisposeFromOnDisable()
         {
-            this.onDeleteAsset = null; 
+            this.onDeleteAsset = null;
             this.Dispose();
         }
 

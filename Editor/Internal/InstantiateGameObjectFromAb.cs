@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UTJ
 {
-    internal class InstanciateGameObjectFromAb
+    internal class InstantiateGameObjectFromAb
     {
         public GameObject gameObject;
         private List<Renderer> allRenderers;
@@ -14,7 +14,7 @@ namespace UTJ
 
         public bool IsProjectShader { get; private set; }
 
-        public InstanciateGameObjectFromAb(GameObject prefab)
+        public InstantiateGameObjectFromAb(GameObject prefab)
         {
             gameObject = GameObject.Instantiate<GameObject>(prefab);
             allRenderers = new List<Renderer>(gameObject.GetComponentsInChildren<Renderer>(true));

@@ -3,15 +3,8 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using System.IO;
-
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
-#else
-using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
-#endif
-
 
 namespace UTJ
 {
@@ -63,11 +56,7 @@ namespace UTJ
 
             ObjectField objectField = null;
 
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
-            objectField = new ObjectField("ShaderVaiantCollection");
-#else
-            objectField = new ObjectField();
-#endif
+            objectField = new ObjectField("ShaderVariantCollection");
             objectField.objectType = typeof(ShaderVariantCollection);
             objectField.value = variantCollection;
             mainFold.Add(objectField);
@@ -79,11 +68,7 @@ namespace UTJ
                 shaderFold.style.paddingLeft = 10;
 
 
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
                 ObjectField shaderObject = new ObjectField("Shader");
-#else
-                ObjectField shaderObject = new ObjectField();
-#endif
                 shaderObject.objectType = typeof(Shader);
                 shaderObject.value = shader;
                 shaderFold.Add(shaderObject);
@@ -94,11 +79,7 @@ namespace UTJ
                 if(this.shaderVariants.TryGetValue(shader,out variants)){
                     Foldout keywordsFold = new Foldout();
                     keywordsFold.text = "keywords(" + variants.keywordNames.Count + ")";
-#if UNITY_2019_1_OR_NEWER || UNITY_2019_OR_NEWER
                     keywordsFold.style.left = 20;
-#else
-                    keywordsFold.style.positionLeft = 20;
-#endif
                     keywordsFold.value = false;
                     foreach ( var keyword in variants.keywordNames)
                     {
