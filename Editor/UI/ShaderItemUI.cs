@@ -1,28 +1,25 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.IO;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
-using UnityEditor.UIElements;
-using System.IO;
 
 namespace UTJ
 {
     public class ShaderItemUI
     {
-        private VisualElement element;
+        internal static readonly string SaveDir = "ShaderVariants/AssetBundles";
+        private readonly string dateTimeStr;
         private DumpProgressUI dumpProgress;
+        private readonly VisualElement element;
+        private readonly Shader shader;
 
         private ShaderDumpInfo shaderDumpInfo;
-        private Shader shader;
-        private string dateTimeStr;
 
-        internal static readonly string SaveDIR = "ShaderVariants/AssetBundles";
-
-        public ShaderItemUI (Shader sh,VisualTreeAsset treeAsset,string date)
+        public ShaderItemUI(Shader sh, VisualTreeAsset treeAsset, string date)
         {
-            this.shader = sh;
-            this.dateTimeStr = date;
+            shader = sh;
+            dateTimeStr = date;
             var shaderData = ShaderUtil.GetShaderData(sh);
             element = treeAsset.CloneTree();
 
@@ -36,31 +33,29 @@ namespace UTJ
             shaderSubShadersFold.text = "SubShaders(" + shaderData.SubshaderCount + ")";
             shaderSubShadersFold.value = false;
 
-            for (int i = 0; i < shaderData.SubshaderCount; ++i)
+            for (var i = 0; i < shaderData.SubshaderCount; ++i)
             {
-                Foldout subShaderFold = new Foldout();
+                var subShaderFold = new Foldout();
                 var subShader = shaderData.GetSubshader(i);
 
-                CreateSubShaderMenu(subShaderFold,i, subShader);
+                CreateSubShaderMenu(subShaderFold, i, subShader);
                 shaderSubShadersFold.Add(subShaderFold);
             }
+
             // DumpBtn
-            element.Q<Button>("DumpButton").clickable.clicked += () =>
-            {
-                DumpStart();
-            };
+            element.Q<Button>("DumpButton").clickable.clicked += DumpStart;
         }
 
         public void AddToElement(VisualElement parent)
         {
-            parent.Add(this.element);
+            parent.Add(element);
         }
 
-        private void CreateSubShaderMenu(Foldout subShaderFold,int idx,ShaderData.Subshader subShader)
+        private void CreateSubShaderMenu(Foldout subShaderFold, int idx, ShaderData.Subshader subShader)
         {
             subShaderFold.text = "SubShader " + idx + " PassNum:" + subShader.PassCount;
 
-            for (int i = 0; i < subShader.PassCount; ++i)
+            for (var i = 0; i < subShader.PassCount; ++i)
             {
                 var pass = subShader.GetPass(i);
                 var label = new Label("PassName:" + pass.Name);
@@ -70,37 +65,44 @@ namespace UTJ
 
         public void Remove()
         {
-            this.shaderDumpInfo = null;
-            this.element.parent.Remove(this.element);
+            shaderDumpInfo = null;
+            element.parent.Remove(element);
         }
 
         public bool IsDumpComplete()
         {
-            if (shaderDumpInfo == null) { return false; }
+            if (shaderDumpInfo == null) return false;
             return shaderDumpInfo.IsComplete;
         }
 
         public void DumpStart()
         {
-            if(shaderDumpInfo != null) { return; }
-            this.shaderDumpInfo = new ShaderDumpInfo(this.shader);
+            if (shaderDumpInfo != null) return;
+            shaderDumpInfo = new ShaderDumpInfo(shader);
 
-            var dumpBtn = this.element.Q<Button>("DumpButton");
+            var dumpBtn = element.Q<Button>("DumpButton");
             // add progress
-            dumpProgress = new DumpProgressUI();
-            dumpProgress.style.width = 200;
+            dumpProgress = new DumpProgressUI
+            {
+                style =
+                {
+                    width = 200
+                }
+            };
             dumpBtn.parent.Add(dumpProgress);
             //
             dumpBtn.parent.Remove(dumpBtn);
             EditorApplication.update += Update;
         }
 
-        private void Update() {
-            if(shaderDumpInfo == null)
+        private void Update()
+        {
+            if (shaderDumpInfo == null)
             {
-                EditorApplication.update -= this.Update;
+                EditorApplication.update -= Update;
                 return;
             }
+
             shaderDumpInfo.SetYieldCheckTime();
             if (!shaderDumpInfo.MoveNext())
             {
@@ -115,24 +117,21 @@ namespace UTJ
 
         private void OnDumpComplete()
         {
-            string dir = SaveDIR + '/' + this.dateTimeStr;
+            var dir = SaveDir + '/' + dateTimeStr;
 
-            if (!Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
             var parent = dumpProgress.parent;
             parent.Remove(dumpProgress);
             CreateKeywordList(parent);
 
-            string jsonString = JsonUtility.ToJson(this.shaderDumpInfo);
-            string file = Path.Combine(dir,shader.name.Replace("/", "_") + ".json");
-            System.IO.File.WriteAllText(file, jsonString);
-            EditorApplication.update -= this.Update;
+            var jsonString = JsonUtility.ToJson(shaderDumpInfo);
+            var file = Path.Combine(dir, shader.name.Replace("/", "_") + ".json");
+            File.WriteAllText(file, jsonString);
+            EditorApplication.update -= Update;
         }
 
-        private void CreateKeywordList( VisualElement parent)
+        private void CreateKeywordList(VisualElement parent)
         {
             var keywords = shaderDumpInfo.CollectKeywords();
             var keywordFold = new Foldout();
@@ -142,11 +141,11 @@ namespace UTJ
             keywordFold.value = false;
             foreach (var keyword in keywords)
             {
-                Label keywordLabel = new Label(keyword);
+                var keywordLabel = new Label(keyword);
                 keywordFold.Add(keywordLabel);
             }
+
             parent.Add(keywordFold);
         }
-
     }
 }

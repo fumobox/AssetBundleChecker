@@ -1,130 +1,144 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEngine;
-
-
-using UnityEngine.UIElements;
 using UnityEditor.UIElements;
+using UnityEngine;
+using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 namespace UTJ
 {
-    public class AssetBundleItemUI:System.IDisposable
+    public class AssetBundleItemUI : IDisposable
     {
         public delegate void OnDeleteAsset(AssetBundleItemUI itemUi);
 
-        private AssetBundle assetBundle;
-        private VisualElement element;
-        private List<UnityEngine.Object> assetBundleObjects;
-        private List<InstantiateGameObjectFromAb> instanciateObjects;
-
         private Foldout advancedFold;
 
-        private SerializedObject serializedObject;
+        private AssetBundle assetBundle;
+        private readonly List<Object> assetBundleObjects;
+        private readonly VisualElement element;
+        private List<InstantiateGameObjectFromAb> instantiateObjects;
         private OnDeleteAsset onDeleteAsset;
+
+        private readonly SerializedObject serializedObject;
 
         public AssetBundleItemUI(string abFilePath, VisualTreeAsset tree, OnDeleteAsset onDelete)
         {
-            this.assetBundle =AssetBundle.LoadFromFile(abFilePath);
-            if(this.assetBundle == null) { return; }
-            this.serializedObject = new SerializedObject(this.assetBundle);
-            this.element = tree.CloneTree();
-            this.onDeleteAsset = onDelete;
-            if (!IsStreamSceneAsset(this.serializedObject))
+            assetBundle = AssetBundle.LoadFromFile(abFilePath);
+            if (assetBundle == null) return;
+            serializedObject = new SerializedObject(assetBundle);
+            element = tree.CloneTree();
+            onDeleteAsset = onDelete;
+            if (!IsStreamSceneAsset(serializedObject))
             {
-                var allObjects = this.assetBundle.LoadAllAssets<UnityEngine.Object>();
-                this.assetBundleObjects = new List<UnityEngine.Object>(allObjects);
+                var allObjects = assetBundle.LoadAllAssets<Object>();
+                assetBundleObjects = new List<Object>(allObjects);
             }
             else
             {
-                this.assetBundleObjects = new List<UnityEngine.Object>();
+                assetBundleObjects = new List<Object>();
             }
-            this.InitElement();
+
+            InitElement();
+        }
+
+        public void Dispose()
+        {
+            onDeleteAsset?.Invoke(this);
+            if (instantiateObjects != null)
+                foreach (var instantiateObj in instantiateObjects)
+                    instantiateObj.Destroy();
+            if (assetBundle != null)
+            {
+                assetBundle.Unload(true);
+                assetBundle = null;
+            }
         }
 
         private bool IsStreamSceneAsset(SerializedObject obj)
         {
-            var prop = obj.FindProperty("m_IsStreamedSceneAssetBundle") ;
-            if( prop == null) { Debug.LogError("m_IsStreamedSceneAssetBundle is null"); }
+            var prop = obj.FindProperty("m_IsStreamedSceneAssetBundle");
+            if (prop == null)
+            {
+                Debug.LogError("m_IsStreamedSceneAssetBundle is null");
+                return false;
+            }
             return prop.boolValue;
         }
 
         public bool Validate()
         {
-            return (this.assetBundle != null);
+            return assetBundle != null;
         }
 
         private void InitElement()
         {
-            if (!string.IsNullOrEmpty(this.assetBundle.name))
-            {
-                this.element.Q<Foldout>("AssetBundleItem").text = this.assetBundle.name;
-            }
-            this.element.Q<Foldout>("AssetBundleItem").value = false;
+            if (!string.IsNullOrEmpty(assetBundle.name)) element.Q<Foldout>("AssetBundleItem").text = assetBundle.name;
+            element.Q<Foldout>("AssetBundleItem").value = false;
 
-            var loadObjectBody = this.element.Q<VisualElement>("LoadObjectBody");
-            foreach( var abObject in assetBundleObjects)
+            var loadObjectBody = element.Q<VisualElement>("LoadObjectBody");
+            foreach (var abObject in assetBundleObjects)
             {
-                var field = new ObjectField(abObject.name);
-                field.allowSceneObjects = true;
+                var field = new ObjectField(abObject.name)
+                {
+                    allowSceneObjects = true
+                };
                 loadObjectBody.Add(field);
                 field.objectType = abObject.GetType();
                 field.value = abObject;
             }
 
-            // instanciate...
-            var instanciateBody = this.element.Q<VisualElement>("MaterialChangeBody");
-            instanciateObjects = new List<InstantiateGameObjectFromAb>();
+            // instantiate...
+            var instantiateBody = element.Q<VisualElement>("MaterialChangeBody");
+            instantiateObjects = new List<InstantiateGameObjectFromAb>();
             foreach (var abObject in assetBundleObjects)
             {
                 var prefab = abObject as GameObject;
-                if( prefab == null) { continue; }
-                var instanciateObject = new InstantiateGameObjectFromAb(prefab);
-                instanciateObjects.Add(instanciateObject);
+                if (prefab == null) continue;
+                var instantiateObject = new InstantiateGameObjectFromAb(prefab);
+                instantiateObjects.Add(instantiateObject);
 
-                var instanceUI = new InstanciateGameObjectUI(instanciateObject);
-                instanceUI.AddToParent(instanciateBody);
+                var instanceUI = new InstantiateGameObjectUI(instantiateObject);
+                instanceUI.AddToParent(instantiateBody);
             }
 
             // advanced
-            advancedFold = this.element.Q<Foldout>("Advanced");
+            advancedFold = element.Q<Foldout>("Advanced");
             var advancedBody = new IMGUIContainer(OnAdvancedGUI);
             advancedFold.Add(advancedBody);
 
             // Close Btn
 
-            this.element.Q<Button>("CloseBtn").clickable.clicked += OnClickClose;
+            element.Q<Button>("CloseBtn").clickable.clicked += OnClickClose;
         }
 
         private void OnClickClose()
         {
-            this.RemoveFormParent();
-            this.Dispose();
+            RemoveFormParent();
+            Dispose();
         }
 
         private void OnAdvancedGUI()
         {
-            if( !this.advancedFold.value)
-            {
-                return;
-            }
-            DoDrawDefaultInspector(this.serializedObject);
+            if (!advancedFold.value) return;
+            DoDrawDefaultInspector(serializedObject);
         }
 
-        internal static bool DoDrawDefaultInspector(SerializedObject obj)
+        private static bool DoDrawDefaultInspector(SerializedObject obj)
         {
             EditorGUI.BeginChangeCheck();
             obj.Update();
 
             // Loop through properties and create one field (including children) for each top level property.
-            SerializedProperty property = obj.GetIterator();
-            bool expanded = true;
+            var property = obj.GetIterator();
+            var expanded = true;
             while (property.NextVisible(expanded))
             {
                 using (new EditorGUI.DisabledScope("m_Script" == property.propertyPath))
                 {
                     EditorGUILayout.PropertyField(property, true);
                 }
+
                 expanded = false;
             }
 
@@ -134,66 +148,35 @@ namespace UTJ
 
         public void AddToElement(VisualElement parent)
         {
-            if (this.element != null)
-            {
-                parent.Add(this.element);
-            }
+            if (element != null) parent.Add(element);
         }
 
-        public void CollectAbObjectToList<T>(List<T> items) where T :class
+        public void CollectAbObjectToList<T>(List<T> items) where T : class
         {
             var preloadTable = serializedObject.FindProperty("m_PreloadTable");
-            var preloadInstancies = preloadTable.serializedObject.context;
+            //var preloadInstancies = preloadTable.serializedObject.context;
 
-            for (int i = 0; i < preloadTable.arraySize; ++i)
+            for (var i = 0; i < preloadTable.arraySize; ++i)
             {
                 var elementProp = preloadTable.GetArrayElementAtIndex(i);
-                var item = elementProp.objectReferenceValue as T;
-                if (item != null && !items.Contains(item))
-                {
-                    items.Add(item);
-                }
+                if (elementProp.objectReferenceValue is T item && !items.Contains(item)) items.Add(item);
             }
-            foreach( var abItem in this.assetBundleObjects)
+
+            foreach (var abItem in assetBundleObjects)
             {
-                var item = abItem as T;
-                if (item != null && !items.Contains(item))
-                {
-                    items.Add(item);
-                }
+                if (abItem is T item && !items.Contains(item)) items.Add(item);
             }
         }
 
         public void RemoveFormParent()
         {
-            if( this.element.parent == null) { return; }
-            this.element.parent.Remove(this.element);
+            element.parent?.Remove(element);
         }
 
         public void DisposeFromOnDisable()
         {
-            this.onDeleteAsset = null;
-            this.Dispose();
-        }
-
-        public void Dispose()
-        {
-            if( this.onDeleteAsset != null)
-            {
-                this.onDeleteAsset(this);
-            }
-            if(instanciateObjects != null)
-            {
-                foreach( var instanciateObj in instanciateObjects)
-                {
-                    instanciateObj.Destroy();
-                }
-            }
-            if (assetBundle != null)
-            {
-                assetBundle.Unload(true);
-                assetBundle = null;
-            }
+            onDeleteAsset = null;
+            Dispose();
         }
     }
 }
