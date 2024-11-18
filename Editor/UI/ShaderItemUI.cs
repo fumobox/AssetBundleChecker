@@ -128,6 +128,18 @@ namespace UTJ
             var jsonString = JsonUtility.ToJson(shaderDumpInfo);
             var file = Path.Combine(dir, shader.name.Replace("/", "_") + ".json");
             File.WriteAllText(file, jsonString);
+
+            var keywords = shaderDumpInfo.CollectKeywords();
+            // Save keywords to csv
+            var csvFile = Path.Combine(dir, shader.name.Replace("/", "_") + "_keywords.csv");
+            using (var writer = new StreamWriter(csvFile))
+            {
+                foreach (var keyword in keywords)
+                {
+                    writer.WriteLine(keyword);
+                }
+            }
+
             EditorApplication.update -= Update;
         }
 
